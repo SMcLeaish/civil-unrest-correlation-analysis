@@ -5,3 +5,12 @@ https://data.humdata.org/dataset/international-migration-flows
 https://data.humdata.org/dataset/google-mobility-report
 
 https://data.humdata.org/dataset/global-acute-food-insecurity-country-data
+
+https://datacatalog.worldbank.org/search/dataset/0066829/Global-Fuel-Prices-Database
+    - has API
+
+
+https://datacatalog.worldbank.org/search/dataset/0037798/Global-Economic-Monitor
+    - Has API
+
+https://datacatalog.worldbank.org/search/dataset/0066940/Space2Stats-Monthly---Annual-Black-Marble-Nighttime-Lights

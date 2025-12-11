@@ -1,3 +1,7 @@
+import lzma
+import shutil
+from pathlib import Path
+
 import polars as pl
 import pycountry
 from geoacled import AcledYear
@@ -30,3 +34,24 @@ def fetch_acled_for_countries(df:pl.DataFrame) -> pl.DataFrame:
             if year_df.width > 0 and year_df.height > 0:
                 dfs.append(year_df)
     return pl.concat(dfs)
+
+def compress(path: str | Path) -> Path:
+    path = Path(path)
+    out_path = path.with_suffix(path.suffix + '.xz')
+
+    with path.open('rb') as src, lzma.open(out_path, 'wb', preset=9) as dst:
+        shutil.copyfileobj(src, dst)
+        return out_path
+
+def decompress(path: str | Path) -> Path:
+    path = Path(path)
+
+    if not path.suffix == '.xz':
+        raise ValueError(f'File does not end with .xz {path}')
+
+    out_path = path.with_suffix('')
+
+    with lzma.open(path, 'rb') as src, out_path.open('wb') as dst:
+        shutil.copyfileobj(src,dst)
+    
+    return out_path

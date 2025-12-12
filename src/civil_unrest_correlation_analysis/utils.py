@@ -20,6 +20,10 @@ def numeric_iso_col(df: pl.DataFrame, col: 'str') -> pl.DataFrame:
                              )
                              .alias('iso'))
 
+def year_month_col(df: pl.DataFrame, col: 'str') -> pl.DataFrame:
+    return df.with_columns(pl.col(col).str.to_date().dt.strftime("%Y-%m")
+    .alias('year_month'))
+
 def fetch_acled_for_countries(df:pl.DataFrame) -> pl.DataFrame:
     isos = df['iso'].unique().to_list()
     periods = df['TIME_PERIOD'].unique().to_list()

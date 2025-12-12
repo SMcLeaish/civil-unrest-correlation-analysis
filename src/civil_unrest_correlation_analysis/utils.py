@@ -2,9 +2,11 @@ import lzma
 import shutil
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 import pycountry
 from geoacled import AcledYear
+
 
 def _get_numeric_iso(alpha_3:str) -> int | None:
     norm = alpha_3.strip().strip('"').strip("'").upper()
@@ -59,3 +61,18 @@ def decompress(path: str | Path) -> Path:
         shutil.copyfileobj(src,dst)
     
     return out_path
+
+def build_feature_df(pipe) -> pl.DataFrame | None:
+        model = pipe.named_steps['model']
+        cols = pipe.named_steps['imputer'].get_feature_names_out()
+        
+        if hasattr(model, "coef_"):
+            values = np.transpose(model.coef_)
+            name = "coefficient"
+        elif hasattr(model, "feature_importances_"):
+            values = model.feature_importances_.reshape(-1, 1)
+            name = "importance"
+        else:
+            return None
+
+        return pl.DataFrame({ "feature": cols, name: values.flatten() })

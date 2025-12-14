@@ -59,13 +59,13 @@ def decompress(path: str | Path) -> Path:
 
     with lzma.open(path, 'rb') as src, out_path.open('wb') as dst:
         shutil.copyfileobj(src,dst)
-    
+
     return out_path
 
 def build_feature_df(pipe) -> pl.DataFrame | None:
         model = pipe.named_steps['model']
         cols = pipe.named_steps['imputer'].get_feature_names_out()
-        
+
         if hasattr(model, "coef_"):
             values = np.transpose(model.coef_)
             name = "coefficient"

@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "altair>=6.0.0",
+    "fastapi[standard]>=0.124.4",
     "geoacled",
     "matplotlib>=3.10.7",
     "numpy>=2.3.5",
@@ -17,6 +18,7 @@ dependencies = [
     "pyarrow>=22.0.0",
     "pycountry>=24.6.1",
     "scikit-learn>=1.7.2",
+    "scikit-learn-stubs>=0.0.3",
     "statsmodels>=0.14.6",
     "tensorflow>=2.20.0",
 ]

@@ -2,35 +2,57 @@ import os
 
 import polars as pl
 
-from utils import numeric_iso_col, compress, decompress
+from civil_unrest_correlation_analysis.schema import AcledEvent, CountryMeta
+from civil_unrest_correlation_analysis.utils.cleaning import (
+    clean_acled,
+    clean_oecd,
+)
+from civil_unrest_correlation_analysis.utils.compression import (
+    check_file_compression,
+    compress,
+    decompress,
+)
 
 
-def _clean_oecd(file: str) -> pl.DataFrame:
-    return numeric_iso_col(pl.read_csv(file), 'REF_AREA').drop_nulls(
-    'iso'
-    )['iso',
-      'TIME_PERIOD',
-      'Measure',
-      'OBS_VALUE'].with_columns(
-    pl.concat_str([pl.col('TIME_PERIOD'),
-                   pl.col('iso')],
-                   separator='-')
-                   .alias('date_iso')
-                   ).unique().pivot(
-    index=['iso', 'TIME_PERIOD'],
-    on='Measure',
-    values='OBS_VALUE',
-    aggregate_function='first').rename({'TIME_PERIOD': 'year_month'})
+def build_acled_events(
+    df: pl.DataFrame,
+    iso: str,
+    start: str,
+    end: str
+    ) -> list[AcledEvent]:
+    return [AcledEvent(**row) for row in df.with_columns(
+      pl.col('event_date')
+      .str.to_date()
+      .dt.strftime("%Y-%m")
+      .alias('year_month')).filter(
+        (pl.col("iso") == iso)
+        & (pl.col("year_month") >= start)
+        & (pl.col("year_month") <= end)
+    ).select(
+        [
+            "year_month",
+            "event_date",
+            "admin1",
+            "location",
+            "event_type",
+            "sub_event_type",
+            "fatalities",
+            "notes",
+        ]
+    ).to_dicts()]
 
-def _clean_acled(file: str) -> pl.DataFrame:
-    return pl.read_csv(file,
-                        schema_overrides={'iso': pl.String}).with_columns(
-    pl.col('event_date')
-    .str.to_date()
-    .dt.strftime("%Y-%m")
-    .alias('year_month')).select(['year_month',
-                                         'iso']).group_by(['year_month',
-                               'iso']).len().rename({'len':'incidents'})
+def build_countries_dict(acled_df: pl.DataFrame) -> dict[str, CountryMeta]:
+    countries = {}
+    for row in acled_df.select(['iso', 'country']).unique().iter_rows(named=True):
+        countries[row['iso']] = CountryMeta(
+            iso=row['iso'],
+            name=row['country'],
+        )
+    return countries
+
+def raw_acled(filepath: str) -> pl.DataFrame:
+    file = check_file_compression(filepath)
+    return pl.read_csv(file, schema_overrides={'iso': pl.String})
 
 def build_dataset(
     oecd_csv: str,
@@ -79,9 +101,9 @@ def build_dataset(
         compress(oecd_csv)
     if not os.path.exists(compressed_acled):
         compress(acled_csv)
-
-    data = _clean_acled(acled_csv).join(
-        _clean_oecd(oecd_csv),
+    
+    data = clean_acled(acled_csv).join(
+        clean_oecd(oecd_csv),
         on=["year_month", "iso"],
         how="left",
     )

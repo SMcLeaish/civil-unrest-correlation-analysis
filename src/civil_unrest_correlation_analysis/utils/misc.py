@@ -1,4 +1,5 @@
 import lzma
+import os
 import shutil
 from pathlib import Path
 
@@ -8,7 +9,7 @@ import pycountry
 from geoacled import AcledYear
 
 
-def _get_numeric_iso(alpha_3:str) -> int | None:
+def _get_numeric_iso(alpha_3:str) -> str | None:
     norm = alpha_3.strip().strip('"').strip("'").upper()
     country = pycountry.countries.get(alpha_3=norm)
     if country:
@@ -63,16 +64,28 @@ def decompress(path: str | Path) -> Path:
     return out_path
 
 def build_feature_df(pipe) -> pl.DataFrame | None:
-        model = pipe.named_steps['model']
-        cols = pipe.named_steps['imputer'].get_feature_names_out()
+    model = pipe.named_steps['model']
+    cols = pipe.named_steps['imputer'].get_feature_names_out()
 
-        if hasattr(model, "coef_"):
-            values = np.transpose(model.coef_)
-            name = "coefficient"
-        elif hasattr(model, "feature_importances_"):
-            values = model.feature_importances_.reshape(-1, 1)
-            name = "importance"
-        else:
-            return None
+    if hasattr(model, "coef_"):
+        values = np.transpose(model.coef_)
+        name = "coefficient"
+    elif hasattr(model, "feature_importances_"):
+        values = model.feature_importances_.reshape(-1, 1)
+        name = "importance"
+    else:
+        return None
 
-        return pl.DataFrame({ "feature": cols, name: values.flatten() })
+    return pl.DataFrame({ "feature": cols, name: values.flatten() })
+
+def load_df(csv_path) -> pl.DataFrame | None:
+    compressed_path = f'{csv_path}.xz'
+    if os.path.exists(csv_path):
+        return pl.read_csv(csv_path)
+    try:
+        if os.path.exists(compressed_path):
+            decompress(compressed_path)
+            return pl.read_csv(csv_path)
+    except Exception as e:
+        raise FileNotFoundError from e
+    return None

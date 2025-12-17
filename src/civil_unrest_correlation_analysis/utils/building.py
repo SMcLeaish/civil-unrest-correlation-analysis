@@ -55,9 +55,8 @@ def build_filtered_acled_events(
         ]
     )
 
-def build_acled_events_dict(acled_df: pl.DataFrame, iso: str, start: str, end: str) -> list[AcledEvent]:
-    filtered = build_filtered_acled_events(acled_df, iso, start, end)
-    return [AcledEvent(**row) for row in filtered.to_dicts()]
+def build_acled_events_dict(acled_df) -> list[AcledEvent]:
+    return [AcledEvent(**row) for row in acled_df.to_dicts()]
 
 def build_geojson_dict(countries: dict[str, CountryMeta]):
     geo_dict = {}
@@ -189,21 +188,23 @@ def build_choropleth(geojson: dict[str, Any],
                       'Number of incidents': 'Number of incidents'}
 )
 
-def build_snapshot(countries_geo, acled_df, iso, start, end, adm) -> SnapshotResponse:
-    country= pycountry.countries.get(numeric=iso).name
-    incident_count_df = joined_df.group_by(
-        'shapeName').len().rename({'len': 'incident_count'}
-        )
-    map = Choropleth(lookup_df=incident_count_df,
-                     lookup_column='shapeName',
-                     geo_df=build_geo_df(geojson),
-                     geojson_id='shapeName')
+def build_snapshot(countries_geo, acled_df, iso, start, end) -> SnapshotResponse:
+    country = pycountry.countries.get(numeric=iso).name
+    clean_acled = clean_column(acled_df.filter(pl.col('iso') == iso), 'ADM1')
+    acled_slice = build_filtered_acled_events(clean_acled, iso, start, end)
+    acled_dict = build_acled_events_dict(acled_slice)
+    chorolpleth = build_choropleth(countries_geo.get('iso'),
+                                   acled_slice,
+                                   country,
+                                   start,
+                                   end)
+    
     return SnapshotResponse(
         iso=iso,
         country=country,
         start=start,
         end=end,
         acled_events=acled_dict,
-        map_spec={'map': map}
+        map_spec=chorolpleth.chart.to_dict()
         )
 

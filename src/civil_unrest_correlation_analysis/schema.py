@@ -26,6 +26,5 @@ class SnapshotResponse(BaseModel):
     country: str
     start: str
     end: str
-    #oecd_metrics: list[OecdMetric]
     acled_events: list[AcledEvent]
-    #map_spec: dict[str, Any]
+    map_spec: dict[str, Any]

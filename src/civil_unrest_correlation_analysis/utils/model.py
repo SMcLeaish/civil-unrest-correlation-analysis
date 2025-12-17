@@ -43,7 +43,6 @@ def import_pipeline(X_train: pl.DataFrame,  # noqa: N803
                     file: str) -> Pipeline:
     if os.path.exists(file):
         loaded = joblib.load(file)
-        loaded = joblib.load(file)
         if isinstance(loaded, dict) and "pipeline" in loaded:
             return loaded["pipeline"]
     return build_pipeline(X_train, y_train, file)

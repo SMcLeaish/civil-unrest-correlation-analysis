@@ -3,14 +3,16 @@ from typing import Any
 
 import polars as pl
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from civil_unrest_correlation_analysis.utils.building import (
-    build_acled_events,
+    build_acled_events_dict,
     build_countries_dict,
     build_dataset,
     clean_acled,
     clean_oecd,
     raw_acled,
+    build_geojson_dict
 )
 from civil_unrest_correlation_analysis.schema import (
     AcledEvent,
@@ -25,7 +27,9 @@ ACLED_CSV = 'data/final/acled.csv'
 DATA_CSV = 'data/final/data.csv'
 DATAFRAMES: dict[str, pl.DataFrame] = {}
 COUNTRIES: dict[str, CountryMeta] = {}
+COUNTRIES_GEO: dict[str, Any] = {}
 LIFESPAN_OBJS: list[dict[str,Any]] = []
+ORIGINS = ['http://localhost:5173']
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,13 +42,20 @@ async def lifespan(app: FastAPI):
     LIFESPAN_OBJS.append(DATAFRAMES)
     if DATAFRAMES.get('raw_acled') is not None:
         COUNTRIES.update(build_countries_dict(DATAFRAMES['raw_acled']))
+        COUNTRIES_GEO.update(build_geojson_dict(COUNTRIES))
         LIFESPAN_OBJS.append(COUNTRIES)
     yield
     for obj in LIFESPAN_OBJS:
         obj.clear()
 
 app = FastAPI(lifespan=lifespan)
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ORIGINS,
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
 @app.get('/countries', response_model=list[CountryMeta])
 async def list_countries() -> list[CountryMeta]:
     if not COUNTRIES:
@@ -79,7 +90,7 @@ async def snapshot(
         & (pl.col("year_month") <= end)
     )
 
-    acled_events = build_acled_events(acled_slice, iso, start, end)
+    acled_events = build_acled_events_dict(acled_slice, iso, start, end)
     return SnapshotResponse(
         iso=iso,
         country=country_meta.name,

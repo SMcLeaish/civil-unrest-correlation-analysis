@@ -52,6 +52,8 @@ def build_filtered_acled_events(
             "sub_event_type",
             "fatalities",
             "notes",
+            'latitude',
+            'longitude'
         ]
     )
 
@@ -193,7 +195,7 @@ def build_snapshot(countries_geo, acled_df, iso, start, end) -> SnapshotResponse
     clean_acled = clean_column(acled_df.filter(pl.col('iso') == iso), 'ADM1')
     acled_slice = build_filtered_acled_events(clean_acled, iso, start, end)
     acled_dict = build_acled_events_dict(acled_slice)
-    chorolpleth = build_choropleth(countries_geo.get('iso'),
+    chorolpleth = build_choropleth(countries_geo.get(iso),
                                    acled_slice,
                                    country,
                                    start,

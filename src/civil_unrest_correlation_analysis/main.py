@@ -12,7 +12,8 @@ from civil_unrest_correlation_analysis.utils.building import (
     clean_acled,
     clean_oecd,
     raw_acled,
-    build_geojson_dict
+    build_geojson_dict,
+    build_snapshot
 )
 from civil_unrest_correlation_analysis.schema import (
     AcledEvent,
@@ -79,22 +80,4 @@ async def snapshot(
     country_meta = COUNTRIES.get(iso)
     if country_meta is None:
         raise HTTPException(status_code=404, detail=f'Unknown ISO {iso}')
-    #BREAK OUT INTO FUNCTION
-    acled_slice = acled.with_columns(
-      pl.col('event_date')
-      .str.to_date()
-      .dt.strftime("%Y-%m")
-      .alias('year_month')).filter(
-        (pl.col("iso") == iso)
-        & (pl.col("year_month") >= start)
-        & (pl.col("year_month") <= end)
-    )
-
-    acled_events = build_acled_events_dict(acled_slice, iso, start, end)
-    return SnapshotResponse(
-        iso=iso,
-        country=country_meta.name,
-        start=start,
-        end=end,
-        acled_events=acled_events,
-    )
+    return build_snapshot(COUNTRIES_GEO, acled, iso, start, end)

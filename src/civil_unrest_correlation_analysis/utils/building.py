@@ -5,15 +5,14 @@ import geopandas as gpd
 import polars as pl
 import pycountry
 from geoacled.chart import Choropleth
-from geoacled.geojson import build_geo_df, get_region_list
-from geoacled.utils.clean import clean_column, clean_set_to_dataframe
+from geoacled.geojson import build_geo_df
+from geoacled.utils.clean import clean_column
 from geoacled.utils.fetch import fetch_geojson
 from shapely import Point
 
 from civil_unrest_correlation_analysis.schema import (
     AcledEvent,
     CountryMeta,
-    OecdMetric,
     SnapshotResponse,
 )
 from civil_unrest_correlation_analysis.utils.cleaning import (
@@ -24,6 +23,11 @@ from civil_unrest_correlation_analysis.utils.compression import (
     check_file_compression,
     compress,
     decompress,
+)
+from civil_unrest_correlation_analysis.viz.chart import (
+    choropleth,
+    concat_chart,
+    prediction_line_chart,
 )
 
 
@@ -189,24 +193,33 @@ def build_choropleth(geojson: dict[str, Any],
     basemap_tooltips={'shapeName': 'Region',
                       'Number of incidents': 'Number of incidents'}
 )
-
-def build_snapshot(countries_geo, acled_df, iso, start, end) -> SnapshotResponse:
+def filter_data(data: pl.DataFrame, iso, start, end) -> pl.DataFrame:
+    return data.with_columns().filter((pl.col('iso') == iso) & (pl.col('year_month') >=  start) & (pl.col('year_month') <= end))
+def build_snapshot(countries_geo,
+                   acled_df,
+                   pipe,
+                   data,
+                   iso,
+                   start,
+                   end) -> SnapshotResponse:
     country = pycountry.countries.get(numeric=iso).name
     clean_acled = clean_column(acled_df.filter(pl.col('iso') == iso), 'ADM1')
     acled_slice = build_filtered_acled_events(clean_acled, iso, start, end)
     acled_dict = build_acled_events_dict(acled_slice)
-    chorolpleth = build_choropleth(countries_geo.get(iso),
+    filtered_data = filter_data(data, iso, start, end)
+    line = prediction_line_chart(filtered_data, pipe)
+    choropleth_obj = choropleth(countries_geo.get(iso),
                                    acled_slice,
                                    country,
                                    start,
                                    end)
-    
+    chart = concat_chart(line, choropleth_obj) 
     return SnapshotResponse(
         iso=iso,
         country=country,
         start=start,
         end=end,
         acled_events=acled_dict,
-        map_spec=chorolpleth.chart.to_dict()
+        map_spec=chart.to_dict()
         )
 

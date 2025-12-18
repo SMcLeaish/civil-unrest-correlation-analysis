@@ -5,22 +5,22 @@ import polars as pl
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from civil_unrest_correlation_analysis.utils.building import (
-    build_acled_events_dict,
-    build_countries_dict,
-    build_dataset,
-    clean_acled,
-    clean_oecd,
-    raw_acled,
-    build_geojson_dict,
-    build_snapshot
-)
 from civil_unrest_correlation_analysis.schema import (
     AcledEvent,
     BaseModel,
     CountryMeta,
     OecdMetric,
     SnapshotResponse,
+)
+from civil_unrest_correlation_analysis.utils.building import (
+    build_acled_events_dict,
+    build_countries_dict,
+    build_dataset,
+    build_geojson_dict,
+    build_snapshot,
+    clean_acled,
+    clean_oecd,
+    raw_acled,
 )
 
 OECD_CSV = 'data/final/oecd.csv'
@@ -30,7 +30,11 @@ DATAFRAMES: dict[str, pl.DataFrame] = {}
 COUNTRIES: dict[str, CountryMeta] = {}
 COUNTRIES_GEO: dict[str, Any] = {}
 LIFESPAN_OBJS: list[dict[str,Any]] = []
-ORIGINS = ['http://localhost:5173']
+ORIGINS = [
+    'http://localhost',
+    'http://localhost:5173',
+    'http://127.0.0.1',
+    'http://127.0.0.1:5173']
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

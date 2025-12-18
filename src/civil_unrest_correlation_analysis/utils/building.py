@@ -96,7 +96,7 @@ def build_dataset(
 
     if read_data_csv:
         if os.path.exists(data_csv):
-            return pl.read_csv(data_csv)
+            return pl.read_csv(data_csv, schema_overrides={'iso': pl.String})
 
         if os.path.exists(compressed_data):
             try:
@@ -111,7 +111,7 @@ def build_dataset(
                 f"Neither {data_csv} nor {compressed_data} exists"
             )
 
-        return pl.read_csv(data_csv)
+        return pl.read_csv(data_csv, schema_overrides={'iso': pl.String})
 
     for raw, comp in [(oecd_csv, compressed_oecd), (acled_csv, compressed_acled)]:
         if not os.path.exists(raw):
@@ -194,6 +194,8 @@ def build_choropleth(geojson: dict[str, Any],
                       'Number of incidents': 'Number of incidents'}
 )
 def filter_data(data: pl.DataFrame, iso, start, end) -> pl.DataFrame:
+    print(data.schema)
+    print(type(iso), iso)
     return data.with_columns().filter((pl.col('iso') == iso) & (pl.col('year_month') >=  start) & (pl.col('year_month') <= end))
 def build_snapshot(countries_geo,
                    acled_df,

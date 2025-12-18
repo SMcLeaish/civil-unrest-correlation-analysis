@@ -4,16 +4,14 @@ from typing import Any
 import polars as pl
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 
 from civil_unrest_correlation_analysis.schema import (
-    AcledEvent,
-    BaseModel,
     CountryMeta,
-    OecdMetric,
     SnapshotResponse,
 )
 from civil_unrest_correlation_analysis.utils.building import (
-    build_acled_events_dict,
     build_countries_dict,
     build_dataset,
     build_geojson_dict,
@@ -22,11 +20,14 @@ from civil_unrest_correlation_analysis.utils.building import (
     clean_oecd,
     raw_acled,
 )
+from civil_unrest_correlation_analysis.utils.model import import_pipeline
 
 OECD_CSV = 'data/final/oecd.csv'
 ACLED_CSV = 'data/final/acled.csv'
 DATA_CSV = 'data/final/data.csv'
+MODEL_PKL = 'random_forest.pkl'
 DATAFRAMES: dict[str, pl.DataFrame] = {}
+MODELS: dict[str, Pipeline] = {}
 COUNTRIES: dict[str, CountryMeta] = {}
 COUNTRIES_GEO: dict[str, Any] = {}
 LIFESPAN_OBJS: list[dict[str,Any]] = []
@@ -49,6 +50,11 @@ async def lifespan(app: FastAPI):
         COUNTRIES.update(build_countries_dict(DATAFRAMES['raw_acled']))
         COUNTRIES_GEO.update(build_geojson_dict(COUNTRIES))
         LIFESPAN_OBJS.append(COUNTRIES)
+    data = DATAFRAMES['data']
+    X = data.drop(['iso', 'year_month', 'incidents'])  # noqa: N806
+    y = data['incidents']
+    X_train, _, y_train, _ = train_test_split(X, y, random_state=42)  # noqa: N806
+    MODELS['pipe'] = import_pipeline(X_train, y_train, MODEL_PKL)
     yield
     for obj in LIFESPAN_OBJS:
         obj.clear()
@@ -84,4 +90,12 @@ async def snapshot(
     country_meta = COUNTRIES.get(iso)
     if country_meta is None:
         raise HTTPException(status_code=404, detail=f'Unknown ISO {iso}')
-    return build_snapshot(COUNTRIES_GEO, acled, iso, start, end)
+    data = DATAFRAMES['data']
+    pipe = MODELS['pipe']
+    return build_snapshot(countries_geo=COUNTRIES_GEO,
+                          acled_df=acled,
+                          pipe=pipe,
+                          data=data,
+                          iso=iso,
+                          start=start,
+                          end=end)

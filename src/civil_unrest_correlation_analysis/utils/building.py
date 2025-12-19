@@ -183,7 +183,7 @@ def build_choropleth(geojson: dict[str, Any],
     incident_count_df = pl.from_pandas(counts)
     incident_count_df = incident_count_df.rename({'incident_count': 'Number of incidents'})
     return Choropleth(
-    title=f'Incidents of Civil Unrest in {country}: {start} to {end}',
+    title='',
     lookup_df=incident_count_df,
     lookup_column="shapeName",
     geo_df=geo_df,

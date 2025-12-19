@@ -116,7 +116,7 @@ def choropleth(geojson: dict[str, Any],
     incident_count_df = pl.from_pandas(counts)
     incident_count_df = incident_count_df.rename({'incident_count': 'Number of incidents'})
     return Choropleth(
-    title=f'Incidents of Civil Unrest in {country}: {start} to {end}',
+    title='',
     lookup_df=incident_count_df,
     lookup_column="shapeName",
     geo_df=geo_df,
@@ -140,10 +140,25 @@ def concat_chart(line: alt.Chart,
     config.update(map_config)
     config.update(line_config)
 
+    font_stack = 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+    cfg = dict(config) 
+    cfg["font"] = font_stack
+
+    cfg.setdefault("title", {})
+    cfg["title"]["font"] = font_stack
+
+    cfg.setdefault("axis", {})
+    cfg["axis"]["labelFont"] = font_stack
+    cfg["axis"]["titleFont"] = font_stack
+
+    cfg.setdefault("legend", {})
+    cfg["legend"]["labelFont"] = font_stack
+    cfg["legend"]["titleFont"] = font_stack
+    
     combined_spec = {
         "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
         "datasets": datasets if datasets else None,
-        "config": config if config else None,
+        "config": cfg if cfg else None,
         "vconcat": [map_spec, line_spec],
     }
 

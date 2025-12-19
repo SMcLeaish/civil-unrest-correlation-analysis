@@ -32,6 +32,10 @@ COUNTRIES: dict[str, CountryMeta] = {}
 COUNTRIES_GEO: dict[str, Any] = {}
 LIFESPAN_OBJS: list[dict[str,Any]] = []
 ORIGINS = [
+    'https://civil-analysis.com',
+    'https://www.civil-analysis.com',
+    'https://seanmcleaish.com',
+    'https://www.seanmcleaish.com',
     'http://localhost',
     'http://localhost:5173',
     'http://127.0.0.1',
